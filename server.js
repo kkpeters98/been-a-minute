@@ -8,8 +8,11 @@ app.use(express.json());
 
 const pool = require('./db');
 const contactsRouter = require('./routes/contacts');
+const messagesRouter = require('./routes/messages');
 
 app.use('/contacts', contactsRouter);
+app.use('/messages', messagesRouter);
+app.post('/test', (req, res) => res.json({ ok: true }));
 
 app.get('/health', async (req, res) => {
   try {
