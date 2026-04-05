@@ -1,80 +1,54 @@
-const express = require('express');
-const router = express.Router();
-const pool = require('../db');
+import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, SafeAreaView } from 'react-native';
+import { useState } from 'react';
 
-// Add a new contact
-router.post('/', async (req, res) => {
-  const { user_id, name, nickname, phone, group_id, cadence_days } = req.body;
-  try {
-    const result = await pool.query(
-      `INSERT INTO contacts (user_id, name, nickname, phone, group_id, cadence_days)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [user_id, name, nickname, phone, group_id, cadence_days || 30]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+const USER_ID = '0f648430-04f9-4012-806b-f0806445ed6f'; // your UUID from earlier
+
+export default function App() {
+  const [query, setQuery] = useState('');
+  const [contacts, setContacts] = useState([]);
+
+  const searchContacts = async (text) => {
+    setQuery(text);
+    if (text.length < 1) return setContacts([]);
+    try {
+      const res = await fetch(`http://10.0.0.153:3000/contacts/search?user_id=${USER_ID}&q=${text}`);
+      const data = await res.json();
+      setContacts(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.title}>Been a Minute</Text>
+      <TextInput
+        style={styles.search}
+        placeholder="Search contacts..."
+        value={query}
+        onChangeText={searchContacts}
+      />
+      <FlatList
+        data={contacts}
+        keyExtractor={item => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity style={styles.contact}>
+            <Text style={styles.name}>{item.name}</Text>
+            <Text style={styles.sub}>{item.cadence_days} day cadence</Text>
+          </TouchableOpacity>
+        )}
+      />
+      <StatusBar style="auto" />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 20 },
+  title: { fontSize: 28, fontWeight: '700', marginTop: 20, marginBottom: 16 },
+  search: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 16, marginBottom: 16 },
+  contact: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  name: { fontSize: 16, fontWeight: '600' },
+  sub: { fontSize: 13, color: '#888', marginTop: 2 },
 });
-
-// Search contacts by name (search-as-you-type)
-router.get('/search', async (req, res) => {
-  const { user_id, q } = req.query;
-  try {
-    const result = await pool.query(
-      `SELECT contacts.*, groups.name as group_name, groups.color_hex
-       FROM contacts
-       LEFT JOIN groups ON contacts.group_id = groups.id
-       WHERE contacts.user_id = $1
-       AND contacts.is_archived = false
-       AND contacts.name ILIKE $2
-       ORDER BY contacts.name ASC
-       LIMIT 20`,
-      [user_id, `%${q}%`]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get a single contact
-router.get('/:id', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT contacts.*, groups.name as group_name
-       FROM contacts
-       LEFT JOIN groups ON contacts.group_id = groups.id
-       WHERE contacts.id = $1`,
-      [req.params.id]
-    );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Contact not found' });
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Log a check-in
-router.post('/:id/checkin', async (req, res) => {
-  const { user_id, note, method } = req.body;
-  const contact_id = req.params.id;
-  try {
-    const checkin = await pool.query(
-      `INSERT INTO checkins (user_id, contact_id, note, method)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [user_id, contact_id, note, method || 'manual']
-    );
-    await pool.query(
-      `UPDATE contacts SET last_contacted_at = NOW() WHERE id = $1`,
-      [contact_id]
-    );
-    res.status(201).json(checkin.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-module.exports = router;
