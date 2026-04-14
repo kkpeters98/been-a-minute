@@ -13,7 +13,10 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSContactsUsageDescription": "Been a Minute uses your contacts to help you add people you care about."
+      }
     },
     "android": {
       "adaptiveIcon": {

@@ -80,4 +80,18 @@ router.post('/:id/checkin', async (req, res) => {
   }
 });
 
+// Get all groups
+router.get('/groups/list', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('groups')
+      .select('*')
+      .order('name');
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
