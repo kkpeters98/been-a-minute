@@ -1,25 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../db');
+const supabase = require('../supabase');
 const Anthropic = require('@anthropic-ai/sdk');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 router.post('/generate', async (req, res) => {
-  const { contact_id, user_id } = req.body;
+  const { contact_id } = req.body;
 
   try {
-    const result = await pool.query(
-      `SELECT contacts.*, users.display_name as user_name
-       FROM contacts
-       JOIN users ON contacts.user_id = users.id
-       WHERE contacts.id = $1`,
-      [contact_id]
-    );
+    const { data: contact, error } = await supabase
+      .from('contacts')
+      .select('*, users(display_name)')
+      .eq('id', contact_id)
+      .single();
+    if (error) throw error;
 
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Contact not found' });
-
-    const contact = result.rows[0];
     const days = contact.last_contacted_at
       ? Math.floor((Date.now() - new Date(contact.last_contacted_at).getTime()) / (1000 * 60 * 60 * 24))
       : null;
