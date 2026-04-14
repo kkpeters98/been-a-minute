@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, SafeArea
 import { useState, useEffect } from 'react';
 
 const USER_ID = '0f648430-04f9-4012-806b-f0806445ed6f';
-const API = 'http://10.0.0.153:3000';
+const API = 'https://been-a-minute.onrender.com';
 
 const GROUP_COLORS = {
   'Close circle': '#FF6B6B',
